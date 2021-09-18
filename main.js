@@ -1,22 +1,39 @@
 // Load environment variables
 require('dotenv').config();
 
-// Require the necessary dependencies
-const { Client, Intents } = require('discord.js');
-const deployCommands = require('./commands/deploy');
+// We need this to load in files configurations
+const fs = require('fs');
 
-// Create a new client instance
+// The client starts our bot
+const { Client, Collection, Intents } = require('discord.js');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
-// When the client is ready, run this code (only once)
-client.once('ready', () => console.log('Ready!'));
+// Register commends from commands folder
+client.commands = fs.readdirSync('./commands').reduce((acc, file) => {
+  if (!file.endsWith('.js')) return acc;
+  const command = require(`./commands/${file}`);
+  return acc.set(command.data.name, command);
+}, new Collection());
 
-client.on('interactionCreate', require('./events/command-interaction'));
+// Register events from events folder
+fs.readdirSync('./events').forEach(file => {
+  if (!file.endsWith('.js')) return;
+
+  const event = require(`./events/${file}`);
+
+  if (event.once) {
+    client.once(event.name, event.execute);
+  } else {
+    client.on(event.name, event.execute);
+  }
+});
 
 (async () => {
-  // Register any commands we've defined
-  await deployCommands();
+  // Deploy commands as a REST endpoint...
+  // Seems pretty redundant considering we're having to
+  // loop through the commands folder twice
+  require('./deploy-commands')();
 
-  // Login to Discord with your client's token
+  // Lift off!
   client.login(process.env.TOKEN);
 })();

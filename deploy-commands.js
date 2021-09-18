@@ -1,12 +1,12 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const fs = require('fs');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 
-const commands = [
-  new SlashCommandBuilder()
-    .setName('qod')
-    .setDescription('Replies with an inspirational quote for the day.')
-].map(command => command.toJSON());
+const commands = fs.readdirSync('./commands').reduce((acc, file) => {
+  if (!file.endsWith('.js')) return acc;
+  const command = require(`./commands/${file}`);
+  return [...acc, command.data.toJSON()];
+}, []);
 
 const rest = new REST({ version: '9' }).setToken(process.env.TOKEN);
 
